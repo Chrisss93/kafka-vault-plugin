@@ -8,8 +8,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const kafkaSecretType = "kafka_scram_credentials"
-
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := backend()
 	if err := b.Setup(ctx, conf); err != nil {
@@ -20,8 +18,21 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 type kafkaScramBackend struct {
 	*framework.Backend
-	lock   sync.RWMutex
-	client *kafkaAdminClient
+	lock         sync.RWMutex
+	client       *kafkaAdminClient
+	managedUsers bool
+}
+
+func (b *kafkaScramBackend) reset() {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if b.client != nil {
+		if err := b.client.Close(); err != nil {
+			b.Logger().Error("Failed to close admin-client: %", err.Error())
+		}
+	}
+	b.client = nil
 }
 
 func backend() *kafkaScramBackend {
@@ -29,34 +40,21 @@ func backend() *kafkaScramBackend {
 
 	b.Backend = &framework.Backend{
 		PathsSpecial: &logical.Paths{
-			SealWrapStorage: []string{"config", "role/*"},
+			SealWrapStorage: []string{"config", principalPath + "*"},
 		},
-		Paths: append(b.pathRole(), b.pathConfig(), b.pathCredentials()),
-		Secrets: []*framework.Secret{{
-			Type: kafkaSecretType,
-			Fields: map[string]*framework.FieldSchema{
-				userKey: {
-					Type:        framework.TypeString,
-					Description: "The generated user's username",
-				},
-			},
-			Revoke: b.revokeUser,
-		}},
+		Paths:       append(append(b.pathPrincipal(), b.pathAcl()...), b.pathConfig(), b.pathToken()),
+		Secrets:     []*framework.Secret{b.delegationToken()},
 		BackendType: logical.TypeLogical,
 		Invalidate: func(ctx context.Context, key string) {
 			if key == "config" {
 				b.reset()
 			}
 		},
-		Help: `The Kafka SCRAM secrets backend dynamically generates users to an Apache Kafka cluster using
-		SCRAM authentication and Kafka ACLs for authorization.
-		The target Kafka cluster must have a listener supporting SCRAM-SHA-256 or SCRAM-SHA-512 authentication.`,
+		Help: `The Kafka Delgation Token Backend allows for the configuration of users with specific permissions in
+		an Apache Kafka cluster which are then used to issue ephemeral delegation tokens.  These tokens are leased
+		secrets in Vault which may be used by end-users for authenticating the Kafka cluster.  This plugin requires
+		a Kafka cluster with a SASL-based advertised listener using SCRAM-SHA-256 or SCRAM-SHA-512`,
+		RunningVersion: "v0.1.0",
 	}
 	return &b
-}
-
-func (b *kafkaScramBackend) reset() {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.client = nil
 }
