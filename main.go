@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/hashicorp/vault/api"
@@ -21,7 +21,7 @@ func main() {
 		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
-		fmt.Printf("plugin shutting down: %v\n", err)
+		log.Printf("plugin shutting down: %v\n", err)
 		os.Exit(1)
 	}
 }

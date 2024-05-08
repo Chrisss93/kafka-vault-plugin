@@ -23,33 +23,13 @@ type PseudoACL struct {
 	Operations []sarama.AclOperation
 }
 
-func (p *PseudoACL) UnmarshalJSON(data []byte) error {
-	var temp struct {
-		ResourceType        int
-		ResourceName        string
-		ResourcePatternType int
-		Operations          []string
-	}
-	if err := json.Unmarshal(data, &temp); err != nil {
-		return err
-	}
-	p.ResourceName = temp.ResourceName
-	p.ResourceType = sarama.AclResourceType(temp.ResourceType)
-	p.ResourcePatternType = sarama.AclResourcePatternType(temp.ResourcePatternType)
-
-	if p.ResourceType == sarama.AclResourceUnknown {
-		return fmt.Errorf("%d is not a known ResourceType", temp.ResourceType)
-	}
-	if p.ResourcePatternType == sarama.AclPatternUnknown {
-		return fmt.Errorf("%d is not a known ResourcePatternType", temp.ResourcePatternType)
-	}
-	p.Operations = make([]sarama.AclOperation, len(temp.Operations))
-	for i, op := range temp.Operations {
-		if err := p.Operations[i].UnmarshalText([]byte(op)); err != nil {
-			return err
-		}
-	}
-	return nil
+func (p PseudoACL) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"ResourceName":        p.ResourceName,
+		"ResourcePatternType": p.ResourcePatternType.String(),
+		"ResourceType":        p.ResourceType.String(),
+		"Operations":          p.Operations,
+	})
 }
 
 var aclFieldSchema = map[string]*framework.FieldSchema{
@@ -115,7 +95,7 @@ func (b *kafkaScramBackend) pathAcl() []*framework.Path {
 func (b *kafkaScramBackend) aclWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	if !b.managedUsers {
-		return logical.ErrorResponse("plugin and/or cluster are not configured to support plugin-managed users"), nil
+		return logical.ErrorResponse("plugin is not configured to support plugin-managed ACLs"), nil
 	}
 
 	if err := data.Validate(); err != nil {
@@ -143,7 +123,7 @@ func (b *kafkaScramBackend) aclWrite(ctx context.Context, req *logical.Request, 
 func (b *kafkaScramBackend) aclDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	if !b.managedUsers {
-		return logical.ErrorResponse("plugin and/or cluster are not configured to support plugin-managed users"), nil
+		return logical.ErrorResponse("plugin is not configured to support plugin-managed ACLs"), nil
 	}
 
 	if err := data.Validate(); err != nil {
@@ -170,7 +150,7 @@ func (b *kafkaScramBackend) aclList(ctx context.Context, req *logical.Request, _
 func (b *kafkaScramBackend) aclRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	if !b.managedUsers {
-		return logical.ErrorResponse("plugin and/or cluster are not configured to support plugin-managed users"), nil
+		return logical.ErrorResponse("plugin is not configured to support plugin-managed ACLs"), nil
 	}
 
 	if err := data.Validate(); err != nil {
@@ -189,8 +169,20 @@ func (b *kafkaScramBackend) aclRead(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("no ACL found with name: %s, name"), nil
 	}
 
-	var resp logical.Response
-	return &resp, entry.DecodeJSON(&resp.Data)
+	var acl PseudoACL
+	if err = entry.DecodeJSON(&acl); err != nil {
+		return nil, err
+	}
+
+	resp := logical.Response{
+		Data: map[string]interface{}{
+			resourceKey:        acl.ResourceName,
+			resourceTypeKey:    acl.ResourceType.String(),
+			resourcePatternKey: acl.ResourcePatternType.String(),
+			operationKey:       acl.Operations,
+		},
+	}
+	return &resp, nil
 }
 
 func (b *kafkaScramBackend) aclExists(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {

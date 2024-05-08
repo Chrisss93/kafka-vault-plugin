@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -136,7 +137,7 @@ func (client kafkaAdminClient) deleteUserWithACL(user string) error {
 		}
 	}
 
-	fmt.Printf(
+	log.Printf(
 		"Deleted %d ACLs and invalidated %d delegation tokens for deleted user: %s\n",
 		len(acls), len(tokens), user,
 	)

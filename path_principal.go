@@ -55,7 +55,7 @@ func (b *kafkaScramBackend) pathPrincipal() []*framework.Path {
 func (b *kafkaScramBackend) principalWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	if !b.managedUsers {
-		return logical.ErrorResponse("plugin and/or cluster are not configured to support plugin-managed users"), nil
+		return logical.ErrorResponse("plugin is not configured to support plugin-managed users"), nil
 	}
 
 	if err := data.Validate(); err != nil {
@@ -90,7 +90,7 @@ func (b *kafkaScramBackend) principalWrite(ctx context.Context, req *logical.Req
 func (b *kafkaScramBackend) principalDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	if !b.managedUsers {
-		return logical.ErrorResponse("plugin and/or cluster are not configured to support plugin-managed users"), nil
+		return logical.ErrorResponse("plugin is not configured to support plugin-managed users"), nil
 	}
 
 	if err := data.Validate(); err != nil {
@@ -122,7 +122,7 @@ func (b *kafkaScramBackend) principalList(ctx context.Context, req *logical.Requ
 func (b *kafkaScramBackend) principalRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	if !b.managedUsers {
-		return logical.ErrorResponse("plugin and/or cluster are not configured to support plugin-managed users"), nil
+		return logical.ErrorResponse("plugin is not configured to support plugin-managed users"), nil
 	}
 
 	if err := data.Validate(); err != nil {
@@ -180,7 +180,7 @@ func parsePrincipal(ctx context.Context, data *framework.FieldData, store logica
 				return principal, err
 			}
 			if entry == nil {
-				return principal, fmt.Errorf("acl: '%s' is not defined in vault", name)
+				return principal, fmt.Errorf("acl: '%s' is not found within this vault plugin", name)
 			}
 			var pseudo PseudoACL
 			if err = entry.DecodeJSON(&pseudo); err != nil {

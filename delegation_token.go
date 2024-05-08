@@ -24,7 +24,7 @@ func (b *kafkaScramBackend) delegationToken() *framework.Secret {
 			},
 			hmacKey: {
 				Type: framework.TypeString,
-				Description: `base-64 encoded HMAC for the kafka delegatin token.  May be used as the password 
+				Description: `base-64 encoded HMAC for the kafka delegation token.  May be used as the password 
 				in SCRAM authentication`,
 			},
 			"expiry_time":   {Type: framework.TypeTime},

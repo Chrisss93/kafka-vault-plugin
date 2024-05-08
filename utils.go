@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
 
 	"github.com/hashicorp/vault/sdk/framework"
 )
@@ -14,7 +15,7 @@ func randomString(length int) string {
 	b := make([]byte, length)
 	_, err := rand.Read(b)
 	if err != nil {
-		fmt.Println("Error generating random salt: ", err)
+		log.Println("Error generating random salt: ", err)
 	}
 	return base64.StdEncoding.EncodeToString(b)
 }

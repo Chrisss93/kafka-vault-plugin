@@ -1,3 +1,5 @@
+//go:build integration
+
 package main
 
 import (
@@ -17,7 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/Chrisss93/kafka-vault-plugin/integration"
-	"gitlab.com/Chrisss93/kafka-vault-plugin/integration/scram"
 )
 
 func TestIntegration(t *testing.T) {
@@ -293,13 +294,13 @@ func getClient(ctx context.Context, storage logical.Storage, data map[string]int
 	case sarama.SCRAM_MECHANISM_SHA_256:
 		config.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
 		config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-			return &scram.TokenSCRAM{Hasher: sha256.New, TokenAuth: true}
+			return &integration.TokenSCRAM{Hasher: sha256.New, TokenAuth: true}
 		}
 
 	case sarama.SCRAM_MECHANISM_SHA_512:
 		config.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
 		config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-			return &scram.TokenSCRAM{Hasher: sha512.New, TokenAuth: true}
+			return &integration.TokenSCRAM{Hasher: sha512.New, TokenAuth: true}
 		}
 
 	default:

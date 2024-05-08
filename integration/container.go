@@ -48,6 +48,9 @@ func KafkaContainer(
 		"KAFKA_CFG_DELEGATION_TOKEN_MASTER_KEY": "foobar",
 	}
 
+	ch := make(chan bool, 1)
+	containerLogs := []testcontainers.LogConsumer{healthyKraft{ch}}
+
 	req := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:      image,
@@ -57,7 +60,8 @@ func KafkaContainer(
 				"-c",
 				`while [ ! -d "/testcontainers"* ]; do echo 'waiting' && sleep 0.1; done;  /testcontainers*/start.sh`,
 			},
-			ExposedPorts: []string{"9094", "9095"},
+			ExposedPorts:   []string{"9094", "9095"},
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{Consumers: containerLogs},
 		},
 	}
 
@@ -65,13 +69,6 @@ func KafkaContainer(
 	if err != nil {
 		return nil, "", err
 	}
-
-	ch := make(chan bool, 1)
-	container.FollowOutput(healthyKraft{ch})
-	if err = container.StartLogProducer(ctx); err != nil {
-		return nil, "", err
-	}
-	defer container.StopLogProducer()
 
 	if err = container.Start(ctx); err != nil {
 		return nil, "", err
@@ -145,7 +142,6 @@ type healthyKraft struct {
 }
 
 func (h healthyKraft) Accept(log testcontainers.Log) {
-	// fmt.Fprint(os.Stderr, string(log.Content))
 	if strings.Contains(string(log.Content), healthyLog) {
 		h.ready <- true
 	}

@@ -1,4 +1,4 @@
-package scram
+package integration
 
 import (
 	"crypto/hmac"
