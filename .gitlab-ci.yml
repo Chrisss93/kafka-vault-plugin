@@ -52,6 +52,7 @@ lint:
     - >-
       golangci-lint run
       --issues-exit-code 222
+      --timeout 3m
       --print-issued-lines=false
       --out-format code-climate:code-climate.json,line-number
   artifacts:
@@ -74,7 +75,7 @@ dep-check:
   variables:
     CODE_CLIMATE: |-
       map(select(.vulnerability != null) | .vulnerability | .osv as $$osv | .modules[] |
-      .packages[0].callstacks[0].frames[0].position as $$pos | select($pos != null) | [{
+      .packages[0].callstacks[0].frames[0].position as $$pos | select($$pos != null) | [{
       "location": {"path": $$pos.filename, "lines": {"begin": $$pos.line, "end": $$pos.line}},
       "description": "Detected vulnerability \($$osv.id) for \(.path)@\(.found_version): \($$osv.details)",
       "fingerprint": ($$osv.id + $$pos.filename + ($$pos.line | tostring)) | @base64,
@@ -126,7 +127,7 @@ dep-check:
     - mkdir -p $GOPATH/bin
     - >-
       which govulncheck || (
-      GOPATH=/go go install govulncheck@v1.0.1 &&
+      GOPATH=/go go install govulncheck@v1.1.0 &&
       mv /go/bin/govulncheck $CI_PROJECT_DIR/.go/bin/govulncheck &&
       ln -s $CI_PROJECT_DIR/.go/bin/govulncheck /usr/local/bin/govulncheck
       )
@@ -149,6 +150,7 @@ dep-check:
 
 
 dep-licenses:
+  stage: check
   before_script:
     - >-
       which go-licenses || (
