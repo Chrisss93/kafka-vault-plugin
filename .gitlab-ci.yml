@@ -60,8 +60,7 @@ lint:
     reports:
       codequality: code-climate.json
   allow_failure:
-    exit_codes:
-      - 222
+    exit_codes: [222]
   cache: &go-bin-cache
     key: $CI_PROJECT_PATH-go-bin
     paths:
@@ -137,15 +136,14 @@ dep-check:
     - govulncheck -json -test ./... > raw.json
     - jq -s "$CODE_CLIMATE" raw.json > govulncheck.json
     # - jq -s --arg start $start "$DEP_SCAN" raw.json > govulncheck-scan.json
-    - '[ -s govulncheck.json ] && jq -e "length > 0" govulncheck.json && govulncheck -test ./... && exit 222'
+    - '[ -s govulncheck.json ] && jq -e "length > 0" govulncheck.json && govulncheck -test ./...'
   artifacts:
     when: always
     reports:
       codequality: govulncheck.json
       dependency_scanning: govulncheck-scan.json
   allow_failure:
-    exit_codes:
-      - 222
+    exit_codes: [3]
   cache: *go-bin-cache
 
 
@@ -186,11 +184,11 @@ dep-licenses:
       EOF
   script:
     - set -e
-    - go-licenses check ./... --allowed_licenses $ALLOWED_LICENSES 2> license-check.txt
+    - go-licenses check ./... --allowed_licenses $ALLOWED_LICENSES 2> license-check.txt || true
     - awk -f codeclimate.awk license-check.txt go.mod | jq -s > license-codeclimate.json
     - |-
       if [ -s license-codeclimate.json ] && jq -e 'length > 0' license-codeclimate.json
-      then cat licenses-check.txt; exit 222
+      then cat license-check.txt; exit 222
       fi
   artifacts:
     when: always
@@ -198,8 +196,7 @@ dep-licenses:
       codequality: license-codeclimate.json
 #      dependency_scanning: license-depscan.json
   allow_failure:
-    exit_codes:
-      - 222
+    exit_codes: [222]
   cache: *go-bin-cache
 
 
