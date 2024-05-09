@@ -272,7 +272,7 @@ compile:
   before_script:
     - which zip || apk add --no-cache zip
   script:
-    - CGO_ENABLED=0 go build -ldflags '$GO_LDFLAGS' -o binaries/app ./....
+    - CGO_ENABLED=0 go build -ldflags "$GO_LDFLAGS" -o binaries/app ./....
     - |-
       if [ "$GOOS" == "windows" ]
       then zip binaries/$GOOS-$GOARCH.zip binaries/app
