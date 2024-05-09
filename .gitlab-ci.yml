@@ -1,7 +1,7 @@
 variables:
   GO_VERSION: '1.20'
-  JOB_IMAGE: registry.gitlab.com/chrisss93/ci/golang:$GO_VERSION
-  # JOB_IMAGE: golang:$GO_VERSION-alpine3.18
+  JOB_IMAGE: registry.gitlab.com/chrisss93/ci/golang:$GO_VERSION # golang:$GO_VERSION-alpine3.18
+  GO_LDFLAGS: '-s -w'
   GOPATH: $CI_PROJECT_DIR/.go
   BUILD_DOCKER_ON_MR: 'true'
   ALLOWED_LICENSES: BSD-3-Clause,MIT,Apache-2.0
@@ -272,7 +272,7 @@ compile:
   before_script:
     - which zip || apk add --no-cache zip
   script:
-    - CGO_ENABLED=0 go build -o binaries/app ./.... -ldflags '-s -w'
+    - CGO_ENABLED=0 go build -ldflags '$GO_LDFLAGS' -o binaries/app ./....
     - |-
       if [ "$GOOS" == "windows" ]
       then zip binaries/$GOOS-$GOARCH.zip binaries/app
