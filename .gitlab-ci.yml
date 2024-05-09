@@ -58,7 +58,7 @@ lint:
   artifacts:
     when: always
     reports:
-      codequality: golangci-lint.json
+      codequality: code-climate.json
   allow_failure:
     exit_codes:
       - 222
@@ -137,7 +137,7 @@ dep-check:
     - govulncheck -json -test ./... > raw.json
     - jq -s "$CODE_CLIMATE" raw.json > govulncheck.json
     # - jq -s --arg start $start "$DEP_SCAN" raw.json > govulncheck-scan.json
-    - '[ -s govulncheck.json ] && jq -e "length > 0" govulncheck.json && jq -s raw.json && exit 222'
+    - '[ -s govulncheck.json ] && jq -e "length > 0" govulncheck.json && govulncheck -test ./... && exit 222'
   artifacts:
     when: always
     reports:
@@ -185,11 +185,12 @@ dep-licenses:
       } 
       EOF
   script:
-    - go-licenses check ./... --allowed_licenses $ALLOWED_LICENSES 2> license_check.txt
-    - awk -f codeclimate.awk license_check.txt go.mod | jq -s > license-codeclimate.json
+    - set -e
+    - go-licenses check ./... --allowed_licenses $ALLOWED_LICENSES 2> license-check.txt
+    - awk -f codeclimate.awk license-check.txt go.mod | jq -s > license-codeclimate.json
     - |-
       if [ -s license-codeclimate.json ] && jq -e 'length > 0' license-codeclimate.json
-      then cat licenses_check.txt; exit 222
+      then cat licenses-check.txt; exit 222
       fi
   artifacts:
     when: always
