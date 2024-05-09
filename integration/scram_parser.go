@@ -49,50 +49,51 @@ func parseFieldInt(s, k string) (int, error) {
 
 	num, err := strconv.Atoi(raw)
 	if err != nil {
-		return 0, fmt.Errorf("error parsing field '%s': %v", k, err)
+		return 0, fmt.Errorf("error parsing field '%s': %w", k, err)
 	}
 
 	return num, nil
 }
 
-func parseServerFirst(s1 string) (msg s1Msg, err error) {
+func parseServerFirst(s1 string) (s1Msg, error) {
+	var msg s1Msg
+	var err error
 
 	// Check for unsupported extensions field "m".
 	if strings.HasPrefix(s1, "m=") {
 		err = errors.New("SCRAM message extensions are not supported")
-		return
+		return msg, err
 	}
 
 	fields := strings.Split(s1, ",")
 	if len(fields) < 3 {
 		err = errors.New("not enough fields in first server message")
-		return
+		return msg, err
 	}
 
-	msg.nonce, err = parseField(fields[0], "r")
-	if err != nil {
-		return
+	if msg.nonce, err = parseField(fields[0], "r"); err != nil {
+		return msg, err
 	}
 
-	msg.salt, err = parseFieldBase64(fields[1], "s")
-	if err != nil {
-		return
+	if msg.salt, err = parseFieldBase64(fields[1], "s"); err != nil {
+		return msg, err
 	}
 
 	msg.iters, err = parseFieldInt(fields[2], "i")
 
-	return
+	return msg, err
 }
 
-func parseServerFinal(s2 string) (msg s2Msg, err error) {
+func parseServerFinal(s2 string) (s2Msg, error) {
+	var msg s2Msg
+	var err error
 	fields := strings.Split(s2, ",")
 
-	msg.verifier, err = parseFieldBase64(fields[0], "v")
-	if err == nil {
-		return
+	if msg.verifier, err = parseFieldBase64(fields[0], "v"); err == nil {
+		return msg, nil
 	}
 
 	msg.err, err = parseField(fields[0], "e")
 
-	return
+	return msg, err
 }

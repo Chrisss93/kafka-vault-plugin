@@ -42,10 +42,10 @@ func backend() *kafkaScramBackend {
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{"config", principalPath + "*"},
 		},
-		Paths:       append(append(b.pathPrincipal(), b.pathAcl()...), b.pathConfig(), b.pathToken()),
+		Paths:       append(append(b.pathPrincipal(), b.pathACL()...), b.pathConfig(), b.pathToken()),
 		Secrets:     []*framework.Secret{b.delegationToken()},
 		BackendType: logical.TypeLogical,
-		Invalidate: func(ctx context.Context, key string) {
+		Invalidate: func(_ context.Context, key string) {
 			if key == "config" {
 				b.reset()
 			}

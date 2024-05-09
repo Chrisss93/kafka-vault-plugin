@@ -47,7 +47,7 @@ func (k *TokenSCRAM) Begin(userName, password, authzID string) error {
 		k.cache = make(map[keyFactors]derivedKeys)
 	}
 	if k.Hasher == nil {
-		return fmt.Errorf("SCRAMClient has no specified Hasher")
+		return errors.New("SCRAMClient has no specified Hasher")
 	}
 	return nil
 }
@@ -56,7 +56,9 @@ func (k *TokenSCRAM) Done() bool {
 	return k.progress == ServerFinal
 }
 
-func (k *TokenSCRAM) Step(challenge string) (response string, err error) {
+func (k *TokenSCRAM) Step(challenge string) (string, error) {
+	var response string
+	var err error
 	switch k.progress {
 	case ClientFirst:
 		response, err = k.clientFirst()
@@ -68,29 +70,32 @@ func (k *TokenSCRAM) Step(challenge string) (response string, err error) {
 		err = k.serverFinal(challenge)
 		k.progress = ServerFinal
 	default:
-		err = fmt.Errorf("conversation already completed")
+		err = errors.New("conversation already completed")
 	}
-	return
+	return response, err
 }
 
 func (k *TokenSCRAM) clientFirst() (string, error) {
+	var err error
 	// Values are cached for use in final message parameters
 	k.msgHeader = k.gs2Header()
-	k.nonce = k.NonceFn()
+	if k.nonce, err = k.NonceFn(); err != nil {
+		return k.msgHeader, err
+	}
 	k.msgClientFirst = fmt.Sprintf("n=%s,r=%s", encodeName(k.username), k.nonce)
 	if k.TokenAuth {
 		k.msgClientFirst += ",tokenauth=true"
 	}
 
-	return k.msgHeader + k.msgClientFirst, nil
+	return k.msgHeader + k.msgClientFirst, err
 }
 
-func (k *TokenSCRAM) NonceFn() string {
+func (k *TokenSCRAM) NonceFn() (string, error) {
 	raw := make([]byte, 24)
 	nonce := make([]byte, base64.StdEncoding.EncodedLen(len(raw)))
-	rand.Read(raw)
+	_, err := rand.Read(raw)
 	base64.StdEncoding.Encode(nonce, raw)
-	return string(nonce)
+	return string(nonce), err
 }
 
 func (k *TokenSCRAM) clientFinal(serverMsg string) (string, error) {
@@ -140,7 +145,7 @@ func (k *TokenSCRAM) serverFinal(serverMsg string) error {
 	}
 
 	if !hmac.Equal(msg.verifier, k.serverSig) {
-		return fmt.Errorf("server validation failed")
+		return errors.New("server validation failed")
 	}
 
 	k.valid = true
@@ -180,21 +185,21 @@ func computeHMAC(hg func() hash.Hash, key, data []byte) []byte {
 	return mac.Sum(nil)
 }
 
-func (s *TokenSCRAM) getCache(kf keyFactors) (derivedKeys, bool) {
-	s.RLock()
-	defer s.RUnlock()
-	dk, ok := s.cache[kf]
+func (k *TokenSCRAM) getCache(kf keyFactors) (derivedKeys, bool) {
+	k.RLock()
+	defer k.RUnlock()
+	dk, ok := k.cache[kf]
 	return dk, ok
 }
 
-func (s *TokenSCRAM) setCache(kf keyFactors, dk derivedKeys) {
-	s.Lock()
-	defer s.Unlock()
-	s.cache[kf] = dk
+func (k *TokenSCRAM) setCache(kf keyFactors, dk derivedKeys) {
+	k.Lock()
+	defer k.Unlock()
+	k.cache[kf] = dk
 }
 
 func encodeName(s string) string {
-	return strings.Replace(strings.Replace(s, "=", "=3D", -1), ",", "=2C", -1)
+	return strings.ReplaceAll(strings.ReplaceAll(s, "=", "=3D"), ",", "=2C")
 }
 
 func xorBytes(a, b []byte) []byte {

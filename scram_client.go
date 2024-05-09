@@ -8,18 +8,17 @@ type SCRAMClient struct {
 	scram.HashGeneratorFcn
 }
 
-func (x *SCRAMClient) Begin(userName, password, authzID string) (err error) {
-	x.Client, err = x.HashGeneratorFcn.NewClient(userName, password, authzID)
-	if err != nil {
+func (x *SCRAMClient) Begin(userName, password, authzID string) error {
+	var err error
+	if x.Client, err = x.HashGeneratorFcn.NewClient(userName, password, authzID); err != nil {
 		return err
 	}
 	x.ClientConversation = x.Client.NewConversation()
-	return nil
+	return err
 }
 
-func (x *SCRAMClient) Step(challenge string) (response string, err error) {
-	response, err = x.ClientConversation.Step(challenge)
-	return
+func (x *SCRAMClient) Step(challenge string) (string, error) {
+	return x.ClientConversation.Step(challenge)
 }
 
 func (x *SCRAMClient) Done() bool {

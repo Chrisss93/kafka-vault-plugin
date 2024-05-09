@@ -14,7 +14,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var wildcard = "*"
+const (
+	wildcard                  = "*"
+	passwordLen               = 50
+	resourceNotFoundErrorCode = 91
+)
 
 type kafkaAdminClient struct {
 	sarama.ClusterAdmin
@@ -64,7 +68,7 @@ func (client kafkaAdminClient) createUserWithACL(user string, pseudoAcls []Pseud
 		}
 	}
 
-	password := randomString(50)
+	password := randomString(passwordLen)
 	salt := randomString(client.SaltSize)
 
 	resp, err := client.UpsertUserScramCredentials([]sarama.AlterUserScramCredentialsUpsert{{
@@ -106,18 +110,19 @@ func (client kafkaAdminClient) deleteUserWithACL(user string) error {
 	}})
 
 	if err == nil && resp[0].ErrorCode != sarama.ErrNoError {
-		err = fmt.Errorf("%s (code: %d)", *resp[0].ErrorMessage, resp[0].ErrorCode)
+		err = fmt.Errorf("%s (code: %d)", *resp[0].ErrorMessage, int16(resp[0].ErrorCode))
 	}
 	if err != nil {
 		return err
 	}
 
 	principal := "User:" + user
+	host := wildcard
 	acls, err := client.DeleteACL(sarama.AclFilter{
 		Principal:                 &principal,
 		ResourceType:              sarama.AclResourceAny,
 		ResourcePatternTypeFilter: sarama.AclPatternAny,
-		Host:                      &wildcard,
+		Host:                      &host,
 		Operation:                 sarama.AclOperationAny,
 		PermissionType:            sarama.AclPermissionAllow,
 	}, false)
@@ -133,7 +138,7 @@ func (client kafkaAdminClient) deleteUserWithACL(user string) error {
 
 	for _, token := range tokens {
 		if _, err = client.ExpireDelegationToken(token.HMAC, -1*time.Millisecond); err != nil {
-			return fmt.Errorf("failed to expire token-id: %s...error: %v", token.TokenID, err)
+			return fmt.Errorf("failed to expire token-id: %s...error: %w", token.TokenID, err)
 		}
 	}
 
@@ -180,7 +185,7 @@ func (client kafkaAdminClient) userAlreadyExists(user string) error {
 	}
 
 	for _, x := range resp {
-		if x.User == user && x.ErrorCode == sarama.KError(91) {
+		if x.User == user && x.ErrorCode == sarama.KError(resourceNotFoundErrorCode) {
 			return nil
 		}
 	}

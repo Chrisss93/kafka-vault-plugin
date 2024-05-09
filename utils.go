@@ -20,11 +20,13 @@ func randomString(length int) string {
 	return base64.StdEncoding.EncodeToString(b)
 }
 
-func getName(data *framework.FieldData) (name string, err error) {
+func getName(data *framework.FieldData) (string, error) {
+	var name string
+	var err error
 	if v, ok := data.GetOk(nameKey); !ok {
 		err = fmt.Errorf("missing: '%s'", nameKey)
 	} else if name, ok = v.(string); !ok || len(name) < 1 {
 		err = fmt.Errorf("'%s' cannot be empty", nameKey)
 	}
-	return
+	return name, err
 }
