@@ -36,7 +36,10 @@ func (b *kafkaScramBackend) delegationToken() *framework.Secret {
 	}
 }
 
-func (b *kafkaScramBackend) renewToken(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) renewToken(
+	ctx context.Context,
+	req *logical.Request,
+	_ *framework.FieldData) (*logical.Response, error) {
 
 	resp := &logical.Response{Secret: req.Secret}
 	var hmac string
@@ -67,7 +70,10 @@ func (b *kafkaScramBackend) renewToken(ctx context.Context, req *logical.Request
 	return resp, nil
 }
 
-func (b *kafkaScramBackend) revokeToken(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) revokeToken(
+	ctx context.Context,
+	req *logical.Request,
+	_ *framework.FieldData) (*logical.Response, error) {
 
 	var (
 		hmac  string

@@ -26,89 +26,91 @@ const (
 	saltDefault = 16
 )
 
-var configFieldSchema = map[string]*framework.FieldSchema{
-	userKey: {
-		Type:        framework.TypeString,
-		Description: "The SCRAM username responsible for configuring the Kafka cluster on behalf of the plugin",
-		Required:    true,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Name:      "Username",
-			Sensitive: false,
+func configFieldSchema() map[string]*framework.FieldSchema {
+	return map[string]*framework.FieldSchema{
+		userKey: {
+			Type:        framework.TypeString,
+			Description: "The SCRAM username responsible for configuring the Kafka cluster on behalf of the plugin",
+			Required:    true,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:      "Username",
+				Sensitive: false,
+			},
 		},
-	},
-	passwordKey: {
-		Type:        framework.TypeString,
-		Description: "The SCRAM password for the supplied username",
-		Required:    true,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Name:      "Password",
-			Sensitive: true,
+		passwordKey: {
+			Type:        framework.TypeString,
+			Description: "The SCRAM password for the supplied username",
+			Required:    true,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:      "Password",
+				Sensitive: true,
+			},
 		},
-	},
-	superUserKey: {
-		Type:        framework.TypeBool,
-		Description: "Set to true if the supplied username is a kafka super-user",
-		Default:     false,
-	},
-	bootstrapKey: {
-		Type:        framework.TypeCommaStringSlice,
-		Description: "A list of Kafka bootstrap-servers' SCRAM-SHA-256/SCRAM-SHA-512 listener port",
-		Required:    true,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Name:      "Bootstrap servers",
-			Sensitive: false,
+		superUserKey: {
+			Type:        framework.TypeBool,
+			Description: "Set to true if the supplied username is a kafka super-user",
+			Default:     false,
 		},
-	},
-	scramHashKey: {
-		Type:          framework.TypeString,
-		Description:   "The hash algorithm used in the SCRAM authentication",
-		Default:       "SHA-256",
-		Required:      true,
-		AllowedValues: []interface{}{"SHA-256", "SHA-512"},
-		DisplayAttrs: &framework.DisplayAttributes{
-			Name:      "SCRAM hash algorithm",
-			Sensitive: false,
+		bootstrapKey: {
+			Type:        framework.TypeCommaStringSlice,
+			Description: "A list of Kafka bootstrap-servers' SCRAM-SHA-256/SCRAM-SHA-512 listener port",
+			Required:    true,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:      "Bootstrap servers",
+				Sensitive: false,
+			},
 		},
-	},
-	caKey: {
-		Type:        framework.TypeString,
-		Description: "PEM contents of a Kafka cluster TLS certificate authority file",
-		Required:    false,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Name:      "Cluster TLS Certificate Authority PEM",
-			Sensitive: true,
+		scramHashKey: {
+			Type:          framework.TypeString,
+			Description:   "The hash algorithm used in the SCRAM authentication",
+			Default:       "SHA-256",
+			Required:      true,
+			AllowedValues: []interface{}{"SHA-256", "SHA-512"},
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:      "SCRAM hash algorithm",
+				Sensitive: false,
+			},
 		},
-	},
-	skipHostVerifyKey: {
-		Type:        framework.TypeBool,
-		Description: "Whether or not to skip verification of the bootstrap servers' certificates.",
-		Required:    false,
-		Default:     false,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Name:      "Skip hostname verification",
-			Sensitive: false,
+		caKey: {
+			Type:        framework.TypeString,
+			Description: "PEM contents of a Kafka cluster TLS certificate authority file",
+			Required:    false,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:      "Cluster TLS Certificate Authority PEM",
+				Sensitive: true,
+			},
 		},
-	},
-	scramIterKey: {
-		Type:        framework.TypeInt,
-		Description: "The hash iteration count used in the SCRAM generated credentials",
-		Default:     iterDefault,
-		Required:    false,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Name:      "SCRAM iterations",
-			Sensitive: false,
+		skipHostVerifyKey: {
+			Type:        framework.TypeBool,
+			Description: "Whether or not to skip verification of the bootstrap servers' certificates.",
+			Required:    false,
+			Default:     false,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:      "Skip hostname verification",
+				Sensitive: false,
+			},
 		},
-	},
-	scramSaltKey: {
-		Type:        framework.TypeInt,
-		Description: "The length of the salt used in SCRAM authentication",
-		Default:     saltDefault,
-		Required:    false,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Name:      "SCRAM salt size",
-			Sensitive: false,
+		scramIterKey: {
+			Type:        framework.TypeInt,
+			Description: "The hash iteration count used in the SCRAM generated credentials",
+			Default:     iterDefault,
+			Required:    false,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:      "SCRAM iterations",
+				Sensitive: false,
+			},
 		},
-	},
+		scramSaltKey: {
+			Type:        framework.TypeInt,
+			Description: "The length of the salt used in SCRAM authentication",
+			Default:     saltDefault,
+			Required:    false,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:      "SCRAM salt size",
+				Sensitive: false,
+			},
+		},
+	}
 }
 
 type kafkaScramConfig struct {
@@ -139,7 +141,7 @@ func getConfig(ctx context.Context, vaultStorage logical.Storage) (*kafkaScramCo
 func (b *kafkaScramBackend) pathConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
-		Fields:  configFieldSchema,
+		Fields:  configFieldSchema(),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation:   &framework.PathOperation{Callback: b.configRead},
 			logical.CreateOperation: &framework.PathOperation{Callback: b.configWrite},
@@ -156,7 +158,11 @@ func (b *kafkaScramBackend) pathConfig() *framework.Path {
 	}
 }
 
-func (b *kafkaScramBackend) configRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) configRead(
+	ctx context.Context,
+	req *logical.Request,
+	_ *framework.FieldData) (*logical.Response, error) {
+
 	config, err := getConfig(ctx, req.Storage)
 	if err != nil {
 		b.Logger().Error("Couldn't get config: %v", err)
@@ -175,7 +181,10 @@ func (b *kafkaScramBackend) configRead(ctx context.Context, req *logical.Request
 	}, nil
 }
 
-func (b *kafkaScramBackend) configWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) configWrite(
+	ctx context.Context,
+	req *logical.Request,
+	data *framework.FieldData) (*logical.Response, error) {
 
 	if err := data.Validate(); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -200,69 +209,8 @@ func (b *kafkaScramBackend) configWrite(ctx context.Context, req *logical.Reques
 		}
 	}
 
-	if username, ok := data.GetOk(userKey); !ok {
-		if createOp {
-			return logical.ErrorResponse("missing '%s'", userKey), nil
-		}
-	} else if config.Username, ok = username.(string); !ok || len(config.Username) < 1 {
-		return logical.ErrorResponse("'%s' must be a non-empty string", userKey), nil
-	}
-
-	if url, ok := data.GetOk(bootstrapKey); !ok {
-		if createOp {
-			return logical.ErrorResponse("missing '%s'", bootstrapKey), nil
-		}
-	} else if config.BootstrapServers, ok = url.([]string); !ok || len(config.BootstrapServers) < 1 {
-		return logical.ErrorResponse("'%s' must be a non-empty list of strings", userKey), nil
-	}
-
-	if password, ok := data.GetOk(passwordKey); !ok {
-		if createOp {
-			return logical.ErrorResponse("missing '%s'", passwordKey), nil
-		}
-	} else if config.Password, ok = password.(string); !ok || len(config.Password) < 1 {
-		return logical.ErrorResponse("'%s' must be a non-empty string", passwordKey), nil
-	}
-
-	if super, ok := data.GetOk(superUserKey); ok {
-		if config.superUser, ok = super.(bool); !ok {
-			return logical.ErrorResponse("'%s' should be a boolean", superUserKey), nil
-		}
-	}
-
-	if pem, ok := data.GetOk(caKey); ok {
-		if config.CA, ok = pem.(string); !ok || len(config.CA) < 1 {
-			return logical.ErrorResponse("'%s' should be a non-empty string", caKey), nil
-		}
-	}
-
-	if v, ok := data.GetOk(scramIterKey); ok {
-		if config.Iterations, ok = v.(int32); !ok {
-			return logical.ErrorResponse("'%s' should be an integer", scramIterKey), nil
-		}
-	}
-
-	if v, ok := data.GetOk(scramSaltKey); ok {
-		if config.SaltSize, ok = v.(int); !ok {
-			return logical.ErrorResponse("'%s' should be an integer", scramSaltKey), nil
-		}
-	}
-
-	if v, ok := data.GetOk(scramHashKey); ok {
-		switch v {
-		case "SHA-256":
-			config.HashAlgo = sarama.SCRAM_MECHANISM_SHA_256
-		case "SHA-512":
-			config.HashAlgo = sarama.SCRAM_MECHANISM_SHA_512
-		default:
-			return logical.ErrorResponse("%s = %v is invalid. Options are: SHA-256 or SHA-512", scramHashKey, v), nil
-		}
-	}
-
-	if v, ok := data.GetOk(skipHostVerifyKey); ok {
-		if config.SkipHostVerify, ok = v.(bool); !ok {
-			return logical.ErrorResponse("'%s' should be a boolean", skipHostVerifyKey), nil
-		}
+	if err = config.parse(data, createOp); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	var resp logical.Response
@@ -286,7 +234,11 @@ func (b *kafkaScramBackend) configWrite(ctx context.Context, req *logical.Reques
 	return &resp, nil
 }
 
-func (b *kafkaScramBackend) configDelete(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) configDelete(
+	ctx context.Context,
+	req *logical.Request,
+	_ *framework.FieldData) (*logical.Response, error) {
+
 	err := req.Storage.Delete(ctx, configPath)
 	if err == nil {
 		b.reset()
@@ -294,7 +246,11 @@ func (b *kafkaScramBackend) configDelete(ctx context.Context, req *logical.Reque
 	return nil, err
 }
 
-func (b *kafkaScramBackend) configExists(ctx context.Context, req *logical.Request, _ *framework.FieldData) (bool, error) {
+func (b *kafkaScramBackend) configExists(
+	ctx context.Context,
+	req *logical.Request,
+	_ *framework.FieldData) (bool, error) {
+
 	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return false, fmt.Errorf("existence check failed: %w", err)
@@ -318,37 +274,8 @@ func (b *kafkaScramBackend) validateCluster(conf kafkaScramConfig) ([]string, er
 
 	// Make sure kafka cluster supports all the APIs required by this plugin.
 	// It would be way simpler to just ask the cluster if its version >= 3.3 (KIP-483)
-	versions, err := broker.ApiVersions(&sarama.ApiVersionsRequest{})
-	if err == nil {
-		if versions.ErrorCode != int16(sarama.ErrNoError) {
-			err = sarama.KError(versions.ErrorCode)
-		}
-	}
-	if err != nil {
+	if err = checkApis(broker); err != nil {
 		return warnings, err
-	}
-
-	apis := map[int16]struct {
-		Name       string
-		MinVersion int16
-	}{
-		38: {"CreateDelegationToken", 3},
-		30: {"CreateAcls", 0},
-		31: {"DeleteAcls", 0},
-		51: {"AlterUserScramCredentials", 0},
-		32: {"DescribeConfigs", 0},
-	}
-
-	for _, key := range versions.ApiKeys {
-		if a, ok := apis[key.ApiKey]; ok {
-			if key.MaxVersion >= a.MinVersion {
-				delete(apis, key.ApiKey)
-			}
-		}
-	}
-
-	if len(apis) > 0 {
-		return warnings, fmt.Errorf("unsupported APIs: %v", apis)
 	}
 
 	// Make sure kafka cluster supports delegation tokens
@@ -406,13 +333,14 @@ func (b *kafkaScramBackend) validateCluster(conf kafkaScramConfig) ([]string, er
 	}
 
 	user := "User:" + conf.Username
+	host := wildcard
 	userAcls, err := admin.ListAcls(sarama.AclFilter{
 		Principal:                 &user,
 		ResourceType:              sarama.AclResourceAny,
 		ResourcePatternTypeFilter: sarama.AclPatternAny,
 		Operation:                 sarama.AclOperationAny,
 		PermissionType:            sarama.AclPermissionAllow,
-		Host:                      &wildcard,
+		Host:                      &host,
 	})
 
 	if err != nil {
@@ -438,4 +366,108 @@ NEXT:
 		warnings = append(warnings, fmt.Sprintf("Configured plugin user might lack privileges to %s", k))
 	}
 	return warnings, nil
+}
+
+func checkApis(broker *sarama.Broker) error {
+	versions, err := broker.ApiVersions(&sarama.ApiVersionsRequest{})
+	if err == nil {
+		if versions.ErrorCode != int16(sarama.ErrNoError) {
+			err = sarama.KError(versions.ErrorCode)
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	apis := map[int16]struct {
+		Name       string
+		MinVersion int16
+	}{
+		38: {"CreateDelegationToken", 3},
+		30: {"CreateAcls", 0},
+		31: {"DeleteAcls", 0},
+		51: {"AlterUserScramCredentials", 0},
+		32: {"DescribeConfigs", 0},
+	}
+
+	for _, key := range versions.ApiKeys {
+		if a, ok := apis[key.ApiKey]; ok {
+			if key.MaxVersion >= a.MinVersion {
+				delete(apis, key.ApiKey)
+			}
+		}
+	}
+
+	if len(apis) > 0 {
+		err = fmt.Errorf("unsupported APIs: %v", apis)
+	}
+	return err
+}
+
+func (c *kafkaScramConfig) parse(data *framework.FieldData, createOp bool) error {
+	if username, ok := data.GetOk(userKey); !ok {
+		if createOp {
+			return fmt.Errorf("missing '%s'", userKey)
+		}
+	} else if c.Username, ok = username.(string); !ok || len(c.Username) < 1 {
+		return fmt.Errorf("'%s' must be a non-empty string", userKey)
+	}
+
+	if url, ok := data.GetOk(bootstrapKey); !ok {
+		if createOp {
+			return fmt.Errorf("missing '%s'", bootstrapKey)
+		}
+	} else if c.BootstrapServers, ok = url.([]string); !ok || len(c.BootstrapServers) < 1 {
+		return fmt.Errorf("'%s' must be a non-empty list of strings", userKey)
+	}
+
+	if password, ok := data.GetOk(passwordKey); !ok {
+		if createOp {
+			return fmt.Errorf("missing '%s'", passwordKey)
+		}
+	} else if c.Password, ok = password.(string); !ok || len(c.Password) < 1 {
+		return fmt.Errorf("'%s' must be a non-empty string", passwordKey)
+	}
+
+	if super, ok := data.GetOk(superUserKey); ok {
+		if c.superUser, ok = super.(bool); !ok {
+			return fmt.Errorf("'%s' should be a boolean", superUserKey)
+		}
+	}
+
+	if pem, ok := data.GetOk(caKey); ok {
+		if c.CA, ok = pem.(string); !ok || len(c.CA) < 1 {
+			return fmt.Errorf("'%s' should be a non-empty string", caKey)
+		}
+	}
+
+	if v, ok := data.GetOk(scramIterKey); ok {
+		if c.Iterations, ok = v.(int32); !ok {
+			return fmt.Errorf("'%s' should be an integer", scramIterKey)
+		}
+	}
+
+	if v, ok := data.GetOk(scramSaltKey); ok {
+		if c.SaltSize, ok = v.(int); !ok {
+			return fmt.Errorf("'%s' should be an integer", scramSaltKey)
+		}
+	}
+
+	if v, ok := data.GetOk(scramHashKey); ok {
+		switch v {
+		case "SHA-256":
+			c.HashAlgo = sarama.SCRAM_MECHANISM_SHA_256
+		case "SHA-512":
+			c.HashAlgo = sarama.SCRAM_MECHANISM_SHA_512
+		default:
+			return fmt.Errorf("%s = %v is invalid. Options are: SHA-256 or SHA-512", scramHashKey, v)
+		}
+	}
+
+	if v, ok := data.GetOk(skipHostVerifyKey); ok {
+		if c.SkipHostVerify, ok = v.(bool); !ok {
+			return fmt.Errorf("'%s' should be a boolean", skipHostVerifyKey)
+		}
+	}
+	return nil
 }

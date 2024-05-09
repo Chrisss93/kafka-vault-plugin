@@ -4,7 +4,7 @@ variables:
   GO_LDFLAGS: '-s -w'
   GOPATH: $CI_PROJECT_DIR/.go
   BUILD_DOCKER_ON_MR: 'true'
-  ALLOWED_LICENSES: BSD-3-Clause,MIT,Apache-2.0
+  ALLOWED_LICENSES: MIT,Apache-2.0,BSD-3-Clause,BSD-2-Clause
 
 default:
   image: $JOB_IMAGE
@@ -240,7 +240,8 @@ unit-tests:
       gocov convert c.out | gocov-html -t kit > coverage.html
       gocov convert c.out | gocov report
       fi
-  coverage: '/^Total Coverage: \d+(?:\.\d+)?% \(\d+/\d+\)$/'
+  coverage: '/^Total Coverage: [1-9]\d*(?:\.\d+)?% \(\d+/\d+\)$/'
+  dependencies: []
   artifacts:
     when: always
     reports:
@@ -250,7 +251,6 @@ unit-tests:
         path: coverage.xml
     paths:
       - coverage.html
-  cache: *go-bin-cache
 
 
 expensive-test:
@@ -263,7 +263,7 @@ expensive-test:
     DOCKER_TLS_CERTDIR: ""
     DOCKER_DRIVER: overlay2
   script:
-    - go test -coverprofile=c.out -tags integration ./... | tee test.txt
+    - go test -coverprofile=c.out -v -tags integration ./... | tee test.txt
     - go-junit-report --set-exit-code --in test.txt > junit.xml
 
 

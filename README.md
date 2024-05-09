@@ -26,7 +26,7 @@ First, pseudo Kafka ACLs must be created (stored only in Vault) to establish the
 
 Then, the `/principal/[name]` endpoint may be written to, given a comma-separated list of previously created pseudo Kafka-ACLs in Vault. This creates a SCRAM user in the Kafka cluster and applies the corresponding ACLs to it.  This is NOT the user which should be used by the plugin's end-users (in fact the credentials are never stored in Vault).
 
-Now tokens can be issued against this newly created kafka user as before.  If the `/principal[name]` is deleted in Vault, it also deletes the SCRAM user as well as its associated ACLs from the Kafka cluster and invalidates all its tokens.  The leases in vault will technically not be revoked but the secrets will be unusable (until I find a means to perform mass lease revocation within the custom plugin framework).
+Now tokens can be issued against this newly created kafka user as before.  If the `/principal/[name]` is deleted in Vault, it also deletes the SCRAM user as well as its associated ACLs from the Kafka cluster and invalidates all its tokens.  The leases in vault will not be revoked but the secrets will be unusable (until I find a means to perform mass lease revocation within the custom plugin framework).
 
 
 ### Plugin user ACLs for managing Kafka users (not just issuing tokens on pre-existing users)

@@ -32,46 +32,48 @@ func (p PseudoACL) MarshalJSON() ([]byte, error) {
 	})
 }
 
-var aclFieldSchema = map[string]*framework.FieldSchema{
-	nameKey: {
-		Type:        framework.TypeString,
-		Description: "Name of the ACL",
-		Required:    true,
-	},
-	resourceKey: {
-		Type:        framework.TypeString,
-		Description: "Name of the Kafka resource which an ACL can be applied to",
-		Required:    true,
-	},
-	resourceTypeKey: {
-		Type:          framework.TypeString,
-		Description:   "The type of the Kafka resource which an ACL can be applied to",
-		Required:      true,
-		AllowedValues: []interface{}{"Topic", "Group", "Cluster", "TransactionalID", "DelegationToken", "Any", "User"},
-	},
-	resourcePatternKey: {
-		Type:          framework.TypeString,
-		Description:   "The pattern-type of the resource name to match to one or more real Kafka resources",
-		Required:      true,
-		Default:       "Literal",
-		AllowedValues: []interface{}{"Literal", "Prefix"},
-	},
-	operationKey: {
-		Type: framework.TypeCommaStringSlice,
-		Description: `The operations to be allowed on the specified Kafka resource. See:
+func aclFieldSchema() map[string]*framework.FieldSchema {
+	return map[string]*framework.FieldSchema{
+		nameKey: {
+			Type:        framework.TypeString,
+			Description: "Name of the ACL",
+			Required:    true,
+		},
+		resourceKey: {
+			Type:        framework.TypeString,
+			Description: "Name of the Kafka resource which an ACL can be applied to",
+			Required:    true,
+		},
+		resourceTypeKey: {
+			Type:          framework.TypeString,
+			Description:   "The type of the Kafka resource which an ACL can be applied to",
+			Required:      true,
+			AllowedValues: []interface{}{"Topic", "Group", "Cluster", "TransactionalID", "DelegationToken", "Any", "User"},
+		},
+		resourcePatternKey: {
+			Type:          framework.TypeString,
+			Description:   "The pattern-type of the resource name to match to one or more real Kafka resources",
+			Required:      true,
+			Default:       "Literal",
+			AllowedValues: []interface{}{"Literal", "Prefix"},
+		},
+		operationKey: {
+			Type: framework.TypeCommaStringSlice,
+			Description: `The operations to be allowed on the specified Kafka resource. See:
 		https://docs.confluent.io/platform/current/kafka/authorization.html#operations`,
-		Required: true,
-		AllowedValues: []interface{}{
-			"Read", "Write", "Create", "Delete", "Alter", "Describe", "All",
-			"ClusterAction", "DescribeConfigs", "AlterConfigs", "IdempotentWrite"},
-	},
+			Required: true,
+			AllowedValues: []interface{}{
+				"Read", "Write", "Create", "Delete", "Alter", "Describe", "All",
+				"ClusterAction", "DescribeConfigs", "AlterConfigs", "IdempotentWrite"},
+		},
+	}
 }
 
-func (b *kafkaScramBackend) pathAcl() []*framework.Path {
+func (b *kafkaScramBackend) pathACL() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: aclPath + framework.GenericNameRegex(nameKey),
-			Fields:  aclFieldSchema,
+			Fields:  aclFieldSchema(),
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation:   &framework.PathOperation{Callback: b.aclRead},
 				logical.CreateOperation: &framework.PathOperation{Callback: b.aclWrite},
@@ -80,7 +82,7 @@ func (b *kafkaScramBackend) pathAcl() []*framework.Path {
 			},
 			ExistenceCheck:  b.aclExists,
 			HelpSynopsis:    "Managing Kafka Resources/ACLs for generating Kafka users.",
-			HelpDescription: `This path allows you to define pseudo-Kafka ACLs that can be later bound to the plugin's roles`,
+			HelpDescription: `This path can define pseudo-Kafka ACLs to be later bound to the plugin's roles`,
 		},
 		{
 			Pattern: aclPath + "?$",
@@ -92,7 +94,10 @@ func (b *kafkaScramBackend) pathAcl() []*framework.Path {
 	}
 }
 
-func (b *kafkaScramBackend) aclWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) aclWrite(
+	ctx context.Context,
+	req *logical.Request,
+	data *framework.FieldData) (*logical.Response, error) {
 
 	if !b.managedUsers {
 		return logical.ErrorResponse("plugin is not configured to support plugin-managed ACLs"), nil
@@ -107,7 +112,7 @@ func (b *kafkaScramBackend) aclWrite(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	acl, err := parseAcl(data)
+	acl, err := parseACL(data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -120,7 +125,10 @@ func (b *kafkaScramBackend) aclWrite(ctx context.Context, req *logical.Request, 
 	return nil, err
 }
 
-func (b *kafkaScramBackend) aclDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) aclDelete(
+	ctx context.Context,
+	req *logical.Request,
+	data *framework.FieldData) (*logical.Response, error) {
 
 	if !b.managedUsers {
 		return logical.ErrorResponse("plugin is not configured to support plugin-managed ACLs"), nil
@@ -138,7 +146,10 @@ func (b *kafkaScramBackend) aclDelete(ctx context.Context, req *logical.Request,
 	return nil, req.Storage.Delete(ctx, aclPath+name)
 }
 
-func (b *kafkaScramBackend) aclList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) aclList(
+	ctx context.Context,
+	req *logical.Request,
+	_ *framework.FieldData) (*logical.Response, error) {
 
 	entries, err := req.Storage.List(ctx, aclPath)
 	if err != nil {
@@ -147,7 +158,10 @@ func (b *kafkaScramBackend) aclList(ctx context.Context, req *logical.Request, _
 	return logical.ListResponse(entries), nil
 }
 
-func (b *kafkaScramBackend) aclRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) aclRead(
+	ctx context.Context,
+	req *logical.Request,
+	data *framework.FieldData) (*logical.Response, error) {
 
 	if !b.managedUsers {
 		return logical.ErrorResponse("plugin is not configured to support plugin-managed ACLs"), nil
@@ -185,18 +199,21 @@ func (b *kafkaScramBackend) aclRead(ctx context.Context, req *logical.Request, d
 	return &resp, nil
 }
 
-func (b *kafkaScramBackend) aclExists(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *kafkaScramBackend) aclExists(
+	ctx context.Context,
+	req *logical.Request,
+	data *framework.FieldData) (bool, error) {
 
 	name, err := getName(data)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 
 	entry, err := req.Storage.Get(ctx, aclPath+name)
 	return entry != nil, err
 }
 
-func parseAcl(data *framework.FieldData) (PseudoACL, error) {
+func parseACL(data *framework.FieldData) (PseudoACL, error) {
 	var acl PseudoACL
 	acl.ResourcePatternType = sarama.AclPatternLiteral
 
@@ -206,39 +223,40 @@ func parseAcl(data *framework.FieldData) (PseudoACL, error) {
 		return acl, fmt.Errorf("'%s' value: '%v' is not a string", resourceKey, v)
 	}
 
-	if v, ok := data.GetOk(resourceTypeKey); !ok {
+	v, ok := data.GetOk(resourceTypeKey)
+	if !ok {
 		return acl, fmt.Errorf("missing '%s'", resourceTypeKey)
-	} else {
-		if vtyped, ok := v.(string); !ok {
-			return acl, fmt.Errorf("'%s' value: '%v' is not a string", resourceTypeKey, v)
-		} else if err := acl.ResourceType.UnmarshalText([]byte(vtyped)); err != nil {
-			return acl, fmt.Errorf("'%s' value: '%v' is invalid: %s", resourceTypeKey, vtyped, err.Error())
-		}
+	}
+	if vtyped, goodString := v.(string); !goodString {
+		return acl, fmt.Errorf("'%s' value: '%v' is not a string", resourceTypeKey, v)
+	} else if err := acl.ResourceType.UnmarshalText([]byte(vtyped)); err != nil {
+		return acl, fmt.Errorf("'%s' value: '%v' is invalid: %s", resourceTypeKey, vtyped, err.Error())
 	}
 
-	if v, ok := data.GetOk(resourcePatternKey); ok {
-		if vtyped, ok := v.(string); !ok {
+	if v, ok = data.GetOk(resourcePatternKey); ok {
+		if vtyped, goodString := v.(string); !goodString {
 			return acl, fmt.Errorf("'%s' value: '%v' is not a string", resourcePatternKey, v)
 		} else if err := acl.ResourcePatternType.UnmarshalText([]byte(vtyped)); err != nil {
 			return acl, fmt.Errorf("'%s' value: '%v' is invalid: %s", resourcePatternKey, vtyped, err.Error())
 		}
 	}
 
-	if v, ok := data.GetOk(operationKey); !ok {
+	v, ok = data.GetOk(operationKey)
+	if !ok {
 		return acl, fmt.Errorf("missing '%s'", operationKey)
-	} else {
-		vtyped, ok := v.([]string)
-		if !ok || len(vtyped) == 0 {
-			return acl, fmt.Errorf("'%s' value: '%v' must be a non-empty string array", operationKey, v)
-		}
+	}
 
-		acl.Operations = make([]sarama.AclOperation, len(vtyped))
-		for i, op := range acl.Operations {
-			if err := op.UnmarshalText([]byte(vtyped[i])); err != nil {
-				return acl, fmt.Errorf("'%s' item: '%v' is invalid: %s", operationKey, vtyped[i], err.Error())
-			}
-			acl.Operations[i] = op
+	vtyped, ok := v.([]string)
+	if !ok || len(vtyped) == 0 {
+		return acl, fmt.Errorf("'%s' value: '%v' must be a non-empty string array", operationKey, v)
+	}
+
+	acl.Operations = make([]sarama.AclOperation, len(vtyped))
+	for i, op := range acl.Operations {
+		if err := op.UnmarshalText([]byte(vtyped[i])); err != nil {
+			return acl, fmt.Errorf("'%s' item: '%v' is invalid: %s", operationKey, vtyped[i], err.Error())
 		}
+		acl.Operations[i] = op
 	}
 
 	return acl, nil

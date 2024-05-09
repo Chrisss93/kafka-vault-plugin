@@ -52,7 +52,7 @@ func TestIntegration(t *testing.T) {
 			passwordKey:  "pwd",
 			superUserKey: true,
 		},
-		Schema: configFieldSchema,
+		Schema: configFieldSchema(),
 	}
 
 	caPem, err := os.ReadFile(caFile)
@@ -95,7 +95,7 @@ func managedUser(ctx context.Context, backend *kafkaScramBackend, storage logica
 				resourcePatternKey: "Literal",
 				operationKey:       []string{"Read", "Write"},
 			},
-			Schema: aclFieldSchema,
+			Schema: aclFieldSchema(),
 		}
 
 		req := logical.Request{Storage: storage, Operation: logical.CreateOperation}
@@ -110,7 +110,7 @@ func managedUser(ctx context.Context, backend *kafkaScramBackend, storage logica
 				nameKey: "foo_user",
 				aclKey:  []string{"foo"},
 			},
-			Schema: principalFieldSchema,
+			Schema: principalFieldSchema(),
 		}
 		resp, err = backend.principalWrite(ctx, &req, &principal)
 		require.NoError(t, err, "Can't create kafka user+ACL from vault plugin role")
@@ -172,7 +172,7 @@ func managedUser(ctx context.Context, backend *kafkaScramBackend, storage logica
 			if assert.NoError(sub, err) {
 				desc, err := admin.DescribeUserScramCredentials([]string{"bar_user"})
 				if assert.NoError(sub, err) {
-					assert.True(sub, desc[0].ErrorCode == 91, desc[0])
+					assert.True(sub, desc[0].ErrorCode == resourceNotFoundErrorCode, desc[0])
 				}
 			}
 

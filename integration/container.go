@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,10 +20,10 @@ const (
 	healthyLog    = "Transitioning from RECOVERY to RUNNING"
 )
 
-// kafkaContainer creates a single-node KRAFT kafka cluster with advertised listeners on the dynamically allocated ports
-// by testcontainer. The cluster exposes two SCRAM-authenticated SASL listeners to test plaintext and ssl behaviour using
-// self-signed certificates with the container's hostname as the CA's CommonName entry. The certificate authority file is
-// written to a temporary file as the second return parameter.
+// kafkaContainer creates a single-node KRAFT kafka cluster with advertised listeners on the dynamically allocated
+// ports by testcontainer. The cluster exposes two SCRAM-authenticated SASL listeners to test plaintext and ssl
+// behaviour using self-signed certificates with the container's hostname as the CA's CommonName entry. The
+// certificate authority file is written to a temporary file as the second return parameter.
 //
 // There are a few issues to sort out since bitnami's kraft support is still a bit iffy.
 func KafkaContainer(
@@ -74,7 +75,7 @@ func KafkaContainer(
 		return nil, "", err
 	}
 
-	scramTlsAddr, err := container.PortEndpoint(ctx, "9094", "")
+	scramTLSAddr, err := container.PortEndpoint(ctx, "9094", "")
 	if err != nil {
 		return nil, "", err
 	}
@@ -90,7 +91,7 @@ func KafkaContainer(
 	mkdir -p /bitnami/kafka/config/certs
 	ln -s $(dirname $0)/* /bitnami/kafka/config/certs/
 	exec /opt/bitnami/scripts/kafka/entrypoint.sh /opt/bitnami/scripts/kafka/run.sh`,
-		scramTlsAddr, scramPlainAddr,
+		scramTLSAddr, scramPlainAddr,
 	)
 
 	tmpDir, err := os.MkdirTemp("", "testcontainers")
@@ -132,7 +133,7 @@ func KafkaContainer(
 	select {
 	case <-ch:
 	case <-time.NewTimer(time.Second * 30).C:
-		err = fmt.Errorf("timed out waiting for Kafka container to become healthy")
+		err = errors.New("timed out waiting for Kafka container to become healthy")
 	}
 	return container, caFileName, err
 }

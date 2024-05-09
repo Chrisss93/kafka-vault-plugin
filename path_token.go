@@ -42,7 +42,10 @@ func (b *kafkaScramBackend) pathToken() *framework.Path {
 	}
 }
 
-func (b *kafkaScramBackend) createToken(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *kafkaScramBackend) createToken(
+	ctx context.Context,
+	req *logical.Request,
+	data *framework.FieldData) (*logical.Response, error) {
 
 	if err := data.Validate(); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -72,7 +75,8 @@ func (b *kafkaScramBackend) createToken(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
-	if desc, err := admin.DescribeUserScramCredentials([]string{name}); err != nil {
+	desc, err := admin.DescribeUserScramCredentials([]string{name})
+	if err != nil {
 		return nil, err
 	} else if !errors.Is(desc[0].ErrorCode, sarama.ErrNoError) {
 		msg := desc[0].ErrorCode.Error()
