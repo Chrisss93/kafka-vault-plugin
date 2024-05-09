@@ -240,6 +240,7 @@ unit-tests:
       gocov convert c.out | gocov-html -t kit > coverage.html
       gocov convert c.out | gocov report
       fi
+  coverage: '/^Total Coverage: \d+(?:\.\d+)?% \(\d+/\d+\)$/'
   artifacts:
     when: always
     reports:
@@ -262,7 +263,7 @@ expensive-test:
     DOCKER_TLS_CERTDIR: ""
     DOCKER_DRIVER: overlay2
   script:
-    - go test -coverprofile=c.out -tags integration ./... | go-junit-report --set-exit-code > go-test.xml
+    - go test -coverprofile=c.out -tags integration ./... | tee test.txt
     - go-junit-report --set-exit-code --in test.txt > junit.xml
 
 
@@ -300,7 +301,7 @@ compile:
   dependencies: []
 
 
-.docker-image:
+docker-image:
   stage: build
   image:
     name: gcr.io/kaniko-project/executor:v1.22.0-debug
